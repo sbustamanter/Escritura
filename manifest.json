@@ -1,0 +1,16 @@
+{
+  "name": "Número a Texto CL",
+  "short_name": "NumTextoCL",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0b0c10",
+  "theme_color": "#4f46e5",
+  "description": "Convierte números a texto en español de Chile",
+  "icons": [
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

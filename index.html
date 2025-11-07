@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Número a Texto CL</title>
+  <meta name="theme-color" content="#4f46e5"/>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-512.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Número a Texto CL">
+  <style>
+    body{
+      font-family:system-ui, sans-serif;
+      background:#0b0c10;
+      color:#e5e7eb;
+      display:flex;align-items:center;justify-content:center;
+      padding:20px;
+    }
+    .card{background:#111319;padding:20px;border-radius:12px;max-width:640px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+    h1{margin-top:0;font-size:1.4rem}
+    label{font-size:.9rem;color:#9ca3af}
+    .input-group{display:flex;gap:10px;margin-top:5px;margin-bottom:15px}
+    input,select,button{padding:10px;border-radius:8px;border:none;font-size:1rem}
+    input,select{flex:1;background:#171a22;color:#fff}
+    button{background:#4f46e5;color:#fff;cursor:pointer}
+    .out{background:#0f1220;border:1px dashed rgba(255,255,255,.2);padding:14px;border-radius:8px;min-height:60px;margin-top:10px}
+    .options{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+    .opt{display:flex;align-items:center;gap:5px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Convertir número a texto (Chile)</h1>
+    <div class="input-group">
+      <input id="numero" type="text" placeholder="Ej.: 1234,56">
+      <button id="btnConvertir">Convertir</button>
+    </div>
+    <div class="options">
+      <div class="opt">
+        <input type="checkbox" id="modoMoneda">
+        <label for="modoMoneda">Modo moneda (pesos chilenos)</label>
+      </div>
+      <div class="opt">
+        <input type="checkbox" id="modoCon100">
+        <label for="modoCon100">Decimales como "con 45/100"</label>
+      </div>
+      <div class="opt">
+        <label for="genero">Género:</label>
+        <select id="genero">
+          <option value="m">Masculino (un)</option>
+          <option value="f">Femenino (una)</option>
+        </select>
+      </div>
+    </div>
+    <div id="salida" class="out"></div>
+  </div>
+
+<script>
+(() => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js');
+  }
+  const numero = document.getElementById('numero');
+  const salida = document.getElementById('salida');
+  const btn = document.getElementById('btnConvertir');
+  const modoMoneda = document.getElementById('modoMoneda');
+  const modoCon100 = document.getElementById('modoCon100');
+  const genero = document.getElementById('genero');
+
+  const unidadesM = ['cero','un','dos','tres','cuatro','cinco','seis','siete','ocho','nueve'];
+  const unidadesF = ['cero','una','dos','tres','cuatro','cinco','seis','siete','ocho','nueve'];
+  const onceAQuince = ['diez','once','doce','trece','catorce','quince'];
+  const dieci = ['dieciséis','diecisiete','dieciocho','diecinueve'];
+  const decenasBase = ['','','veinte','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
+  const centenas = ['','ciento','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];
+  const especialesVeinti = {2:'veintidós',3:'veintitrés',6:'veintiséis'};
+
+  function centenaALetras(num, gen='m'){
+    const uArr = gen==='f' ? unidadesF : unidadesM;
+    const n = Number(num);
+    if(n===0) return '';
+    if(n===100) return 'cien';
+    const c = Math.floor(n/100);
+    const d = Math.floor((n%100)/10);
+    const u = n%10;
+    let partes = [];
+    if(c) partes.push(centenas[c]);
+    if(n%100 < 10){
+      partes.push(uArr[u]);
+    } else if(n%100 < 16){
+      partes.push(onceAQuince[n%100 - 10]);
+    } else if(n%100 < 20){
+      partes.push(dieci[n%100 - 16]);
+    } else if(n%100 < 30){
+      if(u === 0) partes.push('veinte');
+      else if(especialesVeinti[u]) partes.push(especialesVeinti[u]);
+      else partes.push('veinti' + uArr[u]);
+    } else {
+      if(u === 0) partes.push(decenasBase[d]);
+      else partes.push(decenasBase[d] + ' y ' + uArr[u]);
+    }
+    return partes.join(' ').trim();
+  }
+
+  function tripletesALetras(big, gen='m'){
+    const s = big.toString().padStart(Math.ceil(big.toString().length/3)*3,'0');
+    const grupos = [];
+    for(let i=0;i<s.length;i+=3) grupos.push(Number(s.slice(i,i+3)));
+    const partes = [];
+    for(let i=0;i<grupos.length;i++){
+      const idx = grupos.length - 1 - i;
+      const g = grupos[i];
+      if(g===0) continue;
+      const texto = centenaALetras(g, (idx===0 ? gen : 'm'));
+      if(idx===0){
+        partes.push(texto);
+      } else if(idx===1){
+        if(g===1) partes.push('mil');
+        else partes.push(texto + ' mil');
+      } else if(idx===2){
+        if(g===1) partes.push('un millón');
+        else partes.push(texto + ' millones');
+      } else if(idx===3){
+        if(g===1) partes.push('mil millones');
+        else partes.push(texto + ' mil millones');
+      }
+    }
+    return partes.join(' ').trim();
+  }
+
+  function enPalabras(numStr, gen='m', moneda=false, con100=false){
+    numStr = numStr.replace(/,/g,'.').trim();
+    if(numStr==='') return '';
+    if(numStr.includes('.')){
+      const [intPart, decPartRaw] = numStr.split('.');
+      const decPart = decPartRaw.replace(/\D/g,'');
+      let intTexto = enPalabras(intPart, gen, moneda, con100);
+      if(con100 && moneda){
+        return intTexto + ' pesos con ' + decPart.padEnd(2,'0').slice(0,2) + '/100';
+      }
+      if(con100){
+        return intTexto + ' con ' + decPart.padEnd(2,'0').slice(0,2) + '/100';
+      }
+      const letrasDec = decPart.split('').map(d => (gen==='f'?unidadesF:unidadesM)[+d]).join(' ');
+      return intTexto + ' coma ' + letrasDec;
+    }
+    const n = BigInt(numStr);
+    if(n===0n) return 'cero' + (moneda?' pesos':'');
+    const texto = tripletesALetras(n, gen);
+    return texto + (moneda ? ' pesos' : '');
+  }
+
+  function convertir(){
+    try{
+      const valor = numero.value;
+      const res = enPalabras(valor, genero.value, modoMoneda.checked, modoCon100.checked);
+      salida.textContent = res;
+    }catch(e){
+      salida.textContent = 'Error: ' + e.message;
+    }
+  }
+
+  btn.addEventListener('click', convertir);
+  numero.addEventListener('keydown', e=>{if(e.key==='Enter') convertir();});
+})();
+</script>
+</body>
+</html>
